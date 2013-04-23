@@ -40,7 +40,7 @@ PGOBENCH = ./$(EXE) bench 32 1 10 default depth
 ### Object files
 OBJS = benchmark.o bitbase.o bitboard.o book.o endgame.o evaluate.o main.o \
 	material.o misc.o movegen.o movepick.o notation.o pawns.o position.o \
-	search.o thread.o timeman.o tt.o uci.o ucioption.o
+	search.o thread.o timeman.o tt.o uci.o ucioption.o $(os).o
 
 ### ==========================================================================
 ### Section 2. High-level Configuration
@@ -102,6 +102,17 @@ ifeq ($(ARCH),x86-64)
 	sse = yes
 endif
 
+ifeq ($(ARCH),linux-x86-64)
+	arch = x86_64
+	os = linux
+	bits = 64
+	prefetch = yes
+	bsfq = yes
+	popcnt = no
+	sse = yes
+endif
+
+
 ifeq ($(ARCH),x86-64-modern)
 	arch = x86_64
 	os = any
@@ -121,6 +132,18 @@ ifeq ($(ARCH),x86-32)
 	popcnt = no
 	sse = yes
 endif
+
+ifeq ($(ARCH),linux-x86-32)
+	arch = i386
+	os = linux
+	bits = 32
+	prefetch = yes
+	bsfq = no
+	popcnt = no
+	sse = yes
+	OBJS += linux.o
+endif
+
 
 ifeq ($(ARCH),x86-32-old)
 	arch = i386
@@ -385,6 +408,7 @@ help:
 	@echo "Supported archs:"
 	@echo ""
 	@echo "x86-64               > x86 64-bit"
+	@echo "linux-x86-64         > x86 64-bit"
 	@echo "x86-64-modern        > x86 64-bit with runtime support for popcnt instruction"
 	@echo "x86-32               > x86 32-bit excluding old hardware without SSE-support"
 	@echo "x86-32-old           > x86 32-bit including also very old hardware"
@@ -484,7 +508,7 @@ config-sanity:
 	@test "$(optimize)" = "yes" || test "$(optimize)" = "no"
 	@test "$(arch)" = "any" || test "$(arch)" = "x86_64" || test "$(arch)" = "i386" || \
 	 test "$(arch)" = "ppc64" || test "$(arch)" = "ppc" || test "$(arch)" = "armv7"
-	@test "$(os)" = "any" || test "$(os)" = "osx"
+	@test "$(os)" = "any" || test "$(os)" = "osx" || test "$(os)" = "linux" 
 	@test "$(bits)" = "32" || test "$(bits)" = "64"
 	@test "$(prefetch)" = "yes" || test "$(prefetch)" = "no"
 	@test "$(bsfq)" = "yes" || test "$(bsfq)" = "no"

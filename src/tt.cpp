@@ -19,11 +19,51 @@
 
 #include <cstring>
 #include <iostream>
+#include <cerrno>
 
 #include "bitboard.h"
 #include "tt.h"
+#include "os.h"
 
 TranspositionTable TT; // Our global transposition table
+
+inline void* RoundUp(void* mem, size_t size)
+{
+    size --;
+    return (void*) ((uintptr_t(mem) + size) & ~size);
+}
+
+void TranspositionTable::FreeTable() {
+
+  if (os && hugeTableSize) {
+      os->FreeTable(table, hugeTableSize);
+  } else {
+      free(mem);
+  }
+  mem = 0;
+  table = 0;
+}
+
+void TranspositionTable::AllocTable(size_t size) {
+
+  if (os) {
+      mem = os->AllocTable(size * sizeof(TTEntry));
+      hugeTableSize = size;
+  }
+
+  if (!mem) {
+      mem = malloc(size * sizeof(TTEntry) + CACHE_LINE_SIZE - 1);
+  }
+
+  if (mem) {
+      table = (TTEntry*) RoundUp(mem, CACHE_LINE_SIZE);
+      clear(); // Operator new is not guaranteed to initialize memory to zero
+  } else {
+      std::cerr << "Failed to allocate " << size * sizeof(TTEntry)
+                << "Bytes for transposition table." << std::endl;
+      exit(EXIT_FAILURE);
+  }
+}
 
 
 /// TranspositionTable::set_size() sets the size of the transposition table,
@@ -40,18 +80,11 @@ void TranspositionTable::set_size(size_t mbSize) {
       return;
 
   hashMask = size - ClusterSize;
-  free(mem);
-  mem = malloc(size * sizeof(TTEntry) + CACHE_LINE_SIZE - 1);
-
-  if (!mem)
-  {
-      std::cerr << "Failed to allocate " << mbSize
-                << "MB for transposition table." << std::endl;
-      exit(EXIT_FAILURE);
+  if (table) {
+      FreeTable();
   }
-
-  table = (TTEntry*)((uintptr_t(mem) + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1));
-  clear(); // Operator new is not guaranteed to initialize memory to zero
+  
+  AllocTable(size);
 }
 
 

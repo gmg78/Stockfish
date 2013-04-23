@@ -84,8 +84,11 @@ class TranspositionTable {
 
   static const unsigned ClusterSize = 4; // A cluster is 64 Bytes
 
+private:
+  void FreeTable();
+  void AllocTable(size_t);
 public:
- ~TranspositionTable() { free(mem); }
+ ~TranspositionTable() { FreeTable(); } 
   void new_search() { generation++; }
 
   TTEntry* probe(const Key key) const;
@@ -96,6 +99,7 @@ public:
   void store(const Key key, Value v, Bound type, Depth d, Move m, Value statV, Value kingD);
 
 private:
+  size_t hugeTableSize;
   uint32_t hashMask;
   TTEntry* table;
   void* mem;
